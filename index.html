@@ -3,31 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tic Tac Toe – Infinite (Protótipo c/ Bot, Animações e Replay)</title>
+  <title>TTT∞ — Jogo</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
+  
+<header class="site-header">
+  <a class="brand" href="index.html">TTT∞</a>
+  <nav class="nav">
+    <a href="index.html">Jogar</a>
+    <a href="howto.html">Como jogar</a>
+    <a href="about.html">Sobre</a>
+    <a class="cta" href="donate.html">Doações</a>
+  </nav>
+</header>
+
+  <main class="container">
     <div class="header">
       <div>
-        <div class="title">Tic Tac Toe – Infinite <span class="hint">(Protótipo c/ Bot + Animações + Replay)</span></div>
-        <div class="hint">Peças "envelhecem": na 4ª jogada do mesmo jogador, a peça mais antiga dele é removida automaticamente.</div>
+        <h1 class="title">Tic Tac Toe — Infinite <span class="hint">(Bot + Animações + Replay)</span></h1>
+        <p class="hint">Peças "envelhecem": na 4ª jogada do mesmo jogador, a peça mais antiga dele é removida automaticamente.</p>
       </div>
       <div class="controls">
-        <button id="btn-new" class="btn primary" title="Começar uma nova rodada (mantém o placar)">Nova rodada</button>
-        <button id="btn-reset" class="btn" title="Zera tudo (placar e rodada)">Resetar tudo</button>
+        <button id="btn-new" class="btn primary">Nova rodada</button>
+        <button id="btn-reset" class="btn">Resetar tudo</button>
       </div>
     </div>
 
-    <div class="wrap">
-      <div class="panel">
+    <div class="wrap game-grid">
+      <section class="panel">
         <div id="board" class="board" aria-label="Tabuleiro 3 por 3" role="grid"></div>
-      </div>
+      </section>
 
-      <div class="panel">
-        <div class="row" style="justify-content:space-between">
+      <section class="panel side">
+        <div class="row space-between">
           <div>
-            <div class="turn">Vez de: <strong id="turn">X</strong></div>
+            <p class="turn">Vez de: <strong id="turn">X</strong></p>
             <div class="score" aria-live="polite">
               <div class="card" aria-label="Placar X">
                 <div class="badge"><span class="dot x"></span>Jogador X</div>
@@ -73,16 +84,18 @@
           </label>
         </div>
 
-        <div class="legend">
-          Dica: o número no canto de cada peça indica sua <em>idade</em> (1 = mais antiga, 3 = mais nova). O ponto no topo marca a jogada mais recente. 
-          Linhas vencedoras ficam <span style="color:var(--win);font-weight:700">em amarelo</span>. Bot joga como <strong>O</strong> quando ativo.
-          <div style="margin-top:6px">Atalhos: <span class="kbd">P</span> reproduzir/pausar · <span class="kbd">Espaço</span> próximo passo.</div>
-        </div>
-
-        <div class="footer">Vanilla JS, sem dependências. Replay reconstroi os eventos (colocar/remover) na ordem exata em que aconteceram.</div>
-      </div>
+        <p class="legend">
+          Dica: o número no canto de cada peça indica sua <em>idade</em> (1 = mais antiga, 3 = mais nova). O ponto no topo marca a jogada mais recente.
+          Linhas vencedoras ficam <strong class="yellow">em amarelo</strong>. Bot joga como <strong>O</strong> quando ativo.
+          <br>Atalhos: <span class="kbd">P</span> reproduzir/pausar · <span class="kbd">Espaço</span> próximo passo.
+        </p>
+      </section>
     </div>
-  </div>
+  </main>
+  
+<footer class="site-footer">
+  <small>Protótipo aberto • Sem dependências • Feito para testes locais</small>
+</footer>
 
   <script src="app.js"></script>
 </body>
