@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tic Tac Toe – Infinite (Protótipo c/ Bot, Animações e Replay)</title>
+  <style>
+    :root{
+      --bg:#0f1220; --panel:#171a2b; --accent:#7c9cff; --muted:#9aa4b2; --x:#ff6b6b; --o:#58d68d; --win:#ffd166; --cell:#1f233a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell, Noto Sans,Helvetica,Arial; background:radial-gradient(1200px 800px at 10% -10%, #1a1f35 0%, #0f1220 60%), var(--bg); color:#e8eefc}
+    .container{max-width:1080px;margin:32px auto;padding:16px}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .title{font-weight:700;letter-spacing:.3px;font-size:clamp(18px,2.6vw,26px)}
+    .hint{color:var(--muted);font-size:14px}
+    .wrap{display:grid;gap:16px;grid-template-columns: 360px 1fr}
+    @media (max-width: 900px){.wrap{grid-template-columns:1fr}}
+    .panel{background:linear-gradient(180deg,#1a1e33, #14172a); border:1px solid #232846; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .board{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr); gap:12px; aspect-ratio:1/1}
+    .cell{background:var(--cell); border:1px solid #2a2f51; border-radius:14px; display:flex;align-items:center;justify-content:center; cursor:pointer; font-weight:800; font-size:48px; transition: transform .12s ease, background .2s, box-shadow .2s; position:relative; overflow:hidden}
+    .cell:focus{outline:2px solid var(--accent); outline-offset:2px}
+    .cell:not(.filled):hover{transform:translateY(-1px)}
+    .cell.filled{cursor:default}
+    .cell .age{position:absolute; bottom:6px; right:8px; font-size:11px; color:var(--muted); opacity:.85}
+    .cell .last{position:absolute; top:6px; left:8px; width:8px; height:8px; border-radius:50%; background:var(--accent)}
+    .cell.win{box-shadow:0 0 0 2px var(--win) inset, 0 0 22px rgba(255,209,102,.35)}
+    .score{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .score .card{background:#12162a;border:1px solid #242a48;border-radius:14px;padding:12px}
+    .badge{display:inline-flex;align-items:center;gap:8px;font-weight:700}
+    .badge .dot{width:10px;height:10px;border-radius:50%}
+    .dot.x{background:var(--x)} .dot.o{background:var(--o)}
+    .count{font-size:28px;font-weight:800;margin-top:8px}
+    .turn{margin:10px 0 2px 0;color:var(--muted)}
+    .turn strong{color:#fff}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+    .btn{background:#1a1f36;color:#e8eefc;border:1px solid #263055;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
+    .btn:hover{filter:brightness(1.08)}
+    .btn.primary{background:linear-gradient(180deg,#2a3570,#223065); border-color:#2d3b86}
+    .legend{margin-top:12px;font-size:13px;color:var(--muted)}
+    .legend code{background:#13172a;border:1px solid #232846;padding:2px 6px;border-radius:6px;color:#cfe1ff}
+    .footer{margin-top:12px; color:var(--muted); font-size:12px}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .switch{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+    .switch input{accent-color:var(--accent)}
+    .divider{height:1px;background:#242a48;margin:12px 0}
+
+    /* --- Animações --- */
+    @keyframes popIn{0%{transform:scale(.2) rotate(-8deg); opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1); opacity:1}}
+    @keyframes fadeOut{0%{opacity:1}100%{opacity:0; transform:scale(.9)}}
+    .piece{display:inline-block; animation: popIn .18s ease-out forwards}
+    .vanish{animation: fadeOut .16s ease forwards}
+    .pulse{animation: pulse 1.2s ease-in-out infinite}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 2px var(--win) inset, 0 0 10px rgba(255,209,102,.2)}50%{box-shadow:0 0 0 2px var(--win) inset, 0 0 26px rgba(255,209,102,.45)}}
+
+    /* Replay controls */
+    .replay{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .replay .time{min-width:120px; text-align:center; font-variant-numeric:tabular-nums}
+    select{background:#12162a;border:1px solid #242a48;border-radius:10px;color:#cfe1ff;padding:8px 10px}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas; font-size:12px; background:#0f1326; border:1px solid #232846; padding:2px 6px; border-radius:6px; color:#b8c8ff}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="title">Tic Tac Toe – Infinite <span class="hint">(Protótipo c/ Bot + Animações + Replay)</span></div>
+        <div class="hint">Peças "envelhecem": na 4ª jogada do mesmo jogador, a peça mais antiga dele é removida automaticamente.</div>
+      </div>
+      <div class="controls">
+        <button id="btn-new" class="btn primary" title="Começar uma nova rodada (mantém o placar)">Nova rodada</button>
+        <button id="btn-reset" class="btn" title="Zera tudo (placar e rodada)">Resetar tudo</button>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="panel">
+        <div id="board" class="board" aria-label="Tabuleiro 3 por 3" role="grid"></div>
+      </div>
+
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <div class="turn">Vez de: <strong id="turn">X</strong></div>
+            <div class="score" aria-live="polite">
+              <div class="card" aria-label="Placar X">
+                <div class="badge"><span class="dot x"></span>Jogador X</div>
+                <div id="score-x" class="count">0</div>
+              </div>
+              <div class="card" aria-label="Rodadas">
+                <div class="badge"><span class="dot" style="background:var(--accent)"></span>Rodadas</div>
+                <div id="round" class="count">1</div>
+              </div>
+              <div class="card" aria-label="Placar O">
+                <div class="badge"><span class="dot o"></span>Jogador O</div>
+                <div id="score-o" class="count">0</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="switch"><input type="checkbox" id="chk-bot" checked> Vs Bot (O)</label>
+            <div class="row" style="margin-top:8px">
+              <label class="switch">Dificuldade
+                <select id="sel-diff" title="Heurística do bot">
+                  <option value="easy">Fácil</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="hard">Difícil</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="replay">
+          <button id="rp-start" class="btn" title="Voltar ao início (⌘/Ctrl+Home)">⏮ Início</button>
+          <button id="rp-step" class="btn" title="Avançar um passo (Barra de espaço)">⏭ Passo</button>
+          <button id="rp-play" class="btn" title="Reproduzir/Pausar (P)">▶︎ Reproduzir</button>
+          <span class="time"><span id="rp-pos">0</span>/<span id="rp-total">0</span> eventos</span>
+          <label class="switch">Velocidade
+            <select id="rp-speed">
+              <option value="700">Lento</option>
+              <option value="450" selected>Médio</option>
+              <option value="220">Rápido</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="legend">
+          Dica: o número no canto de cada peça indica sua <em>idade</em> (1 = mais antiga, 3 = mais nova). O ponto no topo marca a jogada mais recente. 
+          Linhas vencedoras ficam <span style="color:var(--win);font-weight:700">em amarelo</span>. Bot joga como <strong>O</strong> quando ativo.
+          <div style="margin-top:6px">Atalhos: <span class="kbd">P</span> reproduzir/pausar · <span class="kbd">Espaço</span> próximo passo.</div>
+        </div>
+
+        <div class="footer">Vanilla JS, sem dependências. Replay reconstroi os eventos (colocar/remover) na ordem exata em que aconteceram.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----- Constantes e estado -----
+    const LINES = [ [0,1,2],[3,4,5],[6,7,8], [0,3,6],[1,4,7],[2,5,8], [0,4,8],[2,4,6] ];
+
+    let board = Array(9).fill(null);     // null | 'X' | 'O'
+    let moves = { X: [], O: [] };        // filas por jogador (índices do tabuleiro)
+    let current = 'X';
+    let lastMoveIndex = null;            // índice da jogada mais recente
+    let gameOver = false;
+    let scores = { X: 0, O: 0 };
+    let round = 1;
+
+    // Bot & Replay
+    const state = { vsBot: true, diff: 'normal', botDelay: 250 };
+    const replay = { events: [], pos: 0, timer: null, playing: false };
+
+    // ----- Elementos -----
+    const elBoard = document.getElementById('board');
+    const elTurn = document.getElementById('turn');
+    const elScoreX = document.getElementById('score-x');
+    const elScoreO = document.getElementById('score-o');
+    const elRound = document.getElementById('round');
+    const btnNew = document.getElementById('btn-new');
+    const btnReset = document.getElementById('btn-reset');
+
+    const chkBot = document.getElementById('chk-bot');
+    const selDiff = document.getElementById('sel-diff');
+
+    // Replay controls
+    const btnRpStart = document.getElementById('rp-start');
+    const btnRpStep = document.getElementById('rp-step');
+    const btnRpPlay = document.getElementById('rp-play');
+    const elRpPos = document.getElementById('rp-pos');
+    const elRpTot = document.getElementById('rp-total');
+    const selRpSpeed = document.getElementById('rp-speed');
+
+    // ----- Board UI -----
+    function buildBoard(){
+      elBoard.innerHTML = '';
+      for(let i=0;i<9;i++){
+        const btn = document.createElement('button');
+        btn.className = 'cell';
+        btn.setAttribute('data-idx', i);
+        btn.setAttribute('role','gridcell');
+        btn.setAttribute('aria-label', `casa ${i+1}`);
+        btn.addEventListener('click', onCellClick);
+        btn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); onCellClick(e);} });
+        elBoard.appendChild(btn);
+      }
+      render();
+    }
+
+    function onCellClick(e){
+      if(gameOver) return;
+      const idx = Number(e.currentTarget.getAttribute('data-idx'));
+      humanPlay(idx);
+    }
+
+    function humanPlay(idx){
+      if(board[idx]!==null) return;
+      if(state.vsBot && current==='O') return; // bloqueia cliques durante turno do bot
+      makeMove(idx, current, { record:true, animate:true });
+      maybeBotTurn();
+    }
+
+    function maybeBotTurn(){
+      if(!state.vsBot || gameOver) return;
+      if(current==='O'){
+        // pequeno delay para parecer "pensando"
+        setTimeout(()=>{
+          const idx = pickBotMove(state.diff);
+          if(idx!=null) makeMove(idx, 'O', { record:true, animate:true });
+        }, state.botDelay);
+      }
+    }
+
+    // ----- Núcleo da jogada -----
+    function makeMove(idx, player, {record=false, animate=false}={}){
+      if(board[idx]!==null || gameOver) return;
+
+      // Coloca peça
+      board[idx] = player;
+      moves[player].push(idx);
+      lastMoveIndex = idx;
+      if(animate){ animatePlace(idx, player); }
+      
+      if(record){ replay.events.push({ type:'place', player, idx }); updateReplayUI(); }
+
+      // Se excedeu 3 peças, remove a mais antiga
+      if(moves[player].length > 3){
+        const oldest = moves[player].shift();
+        if(oldest !== idx){
+          removePiece(oldest, player, {record, animate});
+        }
+      }
+
+      // Checa vitória
+      const win = checkWin(player);
+      if(win){
+        gameOver = true;
+        scores[player]++;
+        flashWin(win);
+        render();
+        return;
+      }
+
+      // Troca de vez
+      current = player==='X' ? 'O' : 'X';
+      render();
+    }
+
+    function removePiece(idx, player, {record=false, animate=false}={}){
+      if(animate) animateRemove(idx);
+      board[idx] = null;
+      if(record){ replay.events.push({ type:'remove', player, idx }); updateReplayUI(); }
+    }
+
+    function checkWin(player){
+      for(const [a,b,c] of LINES){
+        if(board[a]===player && board[b]===player && board[c]===player){ return [a,b,c]; }
+      }
+      return null;
+    }
+
+    function flashWin(cells){
+      cells.forEach(i=>{ elBoard.children[i].classList.add('win','pulse'); });
+    }
+
+    function render(){
+      for(let i=0;i<9;i++){
+        const el = elBoard.children[i];
+        const val = board[i];
+        el.classList.remove('filled','win','pulse','vanish');
+        // preserva animações já aplicadas (não limpa innerHTML antes de deixar a anima sair)
+        el.innerHTML = '';
+        if(val){
+          const span = document.createElement('span');
+          span.textContent = val;
+          span.className = 'piece';
+          span.style.color = val==='X' ? getVar('--x') : getVar('--o');
+          el.appendChild(span);
+          el.classList.add('filled');
+
+          const order = moves[val];
+          const posInQueue = order.indexOf(i);
+          if(posInQueue!==-1){
+            const age = document.createElement('div'); age.className='age'; age.textContent=(posInQueue+1).toString(); el.appendChild(age);
+          }
+          if(i===lastMoveIndex){ const dot=document.createElement('div'); dot.className='last'; el.appendChild(dot); }
+        }
+      }
+      elTurn.textContent = current;
+      elScoreX.textContent = scores.X; elScoreO.textContent = scores.O; elRound.textContent = round;
+      elBoard.setAttribute('aria-description', `Vez de ${current}. Placar X ${scores.X} contra O ${scores.O}. Rodada ${round}.`);
+    }
+
+    function animatePlace(idx, player){
+      const el = elBoard.children[idx];
+      // efeito já acontece via .piece popIn ao renderizar
+    }
+    function animateRemove(idx){
+      const el = elBoard.children[idx];
+      if(!el) return;
+      // Tenta animar apenas a peça, para não "sumir" a célula inteira
+      const piece = el.querySelector('.piece');
+      if(piece){ piece.classList.add('vanish'); }
+      else { el.classList.add('vanish'); }
+      // Render irá limpar a classe 'vanish' na próxima pintura
+    }
+
+    // ----- Nova rodada / Reset -----
+    function newRound(){
+      board = Array(9).fill(null);
+      moves = { X: [], O: [] };
+      gameOver = false; lastMoveIndex = null;
+      // Alterna quem começa a cada rodada
+      current = (round % 2 === 1) ? 'O' : 'X';
+      round++;
+      // zera replay desta nova rodada
+      replay.events = []; replay.pos = 0; stopReplay(); updateReplayUI();
+      render();
+      maybeBotTurn();
+    }
+
+    function resetAll(){
+      scores = { X:0, O:0 }; round = 1; current='X';
+      board = Array(9).fill(null); moves = { X: [], O: [] };
+      gameOver=false; lastMoveIndex=null;
+      replay.events = []; replay.pos = 0; stopReplay(); updateReplayUI();
+      render();
+    }
+
+    // ----- Bot (heurísticas simples) -----
+    function pickBotMove(level){
+      const empties = emptyCells();
+      if(empties.length===0) return null;
+
+      // Helper para testar vitória imediata
+      const winMove = (player)=>{
+        for(const i of empties){ if(wouldWin(i, player)) return i; } return null;
+      };
+
+      if(level==='easy'){
+        return empties[Math.floor(Math.random()*empties.length)];
+      }
+
+      // NORMAL: ganhar > bloquear > centro > cantos > lados
+      let m = winMove('O'); if(m!=null) return m;            // ganhar
+      m = winMove('X'); if(m!=null) return m;                // bloquear
+      if(board[4]==null) return 4;                           // centro
+      const corners = empties.filter(i=>[0,2,6,8].includes(i)); if(corners.length) return corners[Math.floor(Math.random()*corners.length)];
+      return empties[0];
+    }
+
+    function wouldWin(idx, player){
+      board[idx]=player; const ok = !!checkWin(player); board[idx]=null; return ok;
+    }
+
+    function emptyCells(){ const arr=[]; for(let i=0;i<9;i++){ if(board[i]==null) arr.push(i);} return arr; }
+
+    // ----- Replay -----
+    function updateReplayUI(){
+      elRpTot.textContent = replay.events.length.toString();
+      elRpPos.textContent = replay.pos.toString();
+    }
+
+    function applyEvent(ev, {animate=true}={}){
+      if(ev.type==='place') makeMove(ev.idx, ev.player, {record:false, animate});
+      else if(ev.type==='remove') removePiece(ev.idx, ev.player, {record:false, animate});
+    }
+
+    function resetToStart(){
+      // reinicia somente a PARTIDA atual, sem mexer em placar/rodada/diff/bot
+      board = Array(9).fill(null); moves={X:[],O:[]}; gameOver=false; lastMoveIndex=null; current='X';
+      render();
+      replay.pos = 0; updateReplayUI();
+    }
+
+    function stepReplay(){
+      if(replay.pos >= replay.events.length){ stopReplay(); return; }
+      const ev = replay.events[replay.pos++]; applyEvent(ev, {animate:true}); updateReplayUI();
+    }
+
+    function playPauseReplay(){
+      if(replay.playing){ stopReplay(); }
+      else { startReplay(); }
+    }
+
+    function startReplay(){
+      stopReplay(); // garante limpar
+      resetToStart();
+      replay.playing = true; btnRpPlay.textContent = '⏸ Pausar';
+      const loop = ()=>{
+        if(!replay.playing){ return; }
+        if(replay.pos >= replay.events.length){ stopReplay(); return; }
+        stepReplay();
+        replay.timer = setTimeout(loop, Number(selRpSpeed.value));
+      };
+      replay.timer = setTimeout(loop, Number(selRpSpeed.value));
+    }
+
+    function stopReplay(){
+      replay.playing = false; btnRpPlay.textContent = '▶︎ Reproduzir';
+      if(replay.timer){ clearTimeout(replay.timer); replay.timer=null; }
+    }
+
+    // ----- Utils / Eventos UI -----
+    function getVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name); }
+
+    btnNew.addEventListener('click', newRound);
+    btnReset.addEventListener('click', resetAll);
+    chkBot.addEventListener('change', (e)=>{ state.vsBot = e.target.checked; if(state.vsBot) maybeBotTurn(); });
+    selDiff.addEventListener('change', (e)=>{ state.diff = e.target.value; });
+
+    // Replay UI
+    btnRpStart.addEventListener('click', ()=>{ stopReplay(); resetToStart(); });
+    btnRpStep.addEventListener('click', ()=>{ stopReplay(); stepReplay(); });
+    btnRpPlay.addEventListener('click', ()=>{ playPauseReplay(); });
+    selRpSpeed.addEventListener('change', ()=>{ if(replay.playing){ stopReplay(); startReplay(); }});
+
+    // Atalhos
+    window.addEventListener('keydown', (e)=>{
+      if(e.key==='p' || e.key==='P'){ e.preventDefault(); playPauseReplay(); }
+      if(e.code==='Space'){ e.preventDefault(); stepReplay(); }
+      if((e.ctrlKey||e.metaKey) && e.key==='Home'){ e.preventDefault(); stopReplay(); resetToStart(); }
+    });
+
+    // Inicializa
+    buildBoard();
+
+    // Inicia com bot ativo se for a vez dele
+    maybeBotTurn();
+  </script>
+</body>
+</html>
